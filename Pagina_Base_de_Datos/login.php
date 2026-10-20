@@ -8,9 +8,11 @@ $rol = $_POST['rol'] ?? '';
 // CONFIGURACIÓN ORACLE CLOUD
 // ==========================================
 $usuario_oracle = 'ADMIN';
-$clave_oracle = getenv('ORACLE_PASSWORD'); // Lee la variable de entorno
+$clave_oracle = getenv('ORACLE_PASSWORD'); // Lee la contraseña de Render
 $cadena_conexion = 'tallerdb_low';
-$wallet_path = getenv('TNS_ADMIN'); // Lee la ruta de la wallet
+
+// FORZAMOS LA RUTA DIRECTA AQUÍ (ya que tus archivos de Wallet están sueltos)
+$wallet_path = '/var/www/html/'; 
 putenv("TNS_ADMIN=" . $wallet_path);
 
 // Conectar a Oracle Cloud
@@ -27,14 +29,12 @@ if (!$conn) {
 
 try {
     if ($rol === 'admin') {
-        // En ADMINISTRADOR el RUT está junto con guion. OJO: PASSWORD va con comillas dobles y escapadas \"
         $sql = "SELECT * FROM ADMINISTRADOR WHERE RUT = :rut AND \"PASSWORD\" = :pass";
         $stid = oci_parse($conn, $sql);
         oci_bind_by_name($stid, ':rut', $rut);
         oci_bind_by_name($stid, ':pass', $password);
     } 
     elseif ($rol === 'mecanico') {
-        // En MECANICO el RUT está separado
         $partes = explode('-', $rut);
         $rut_num = $partes[0] ?? '';
         $rut_dv = $partes[1] ?? '';
@@ -46,7 +46,6 @@ try {
         oci_bind_by_name($stid, ':pass', $password);
     } 
     elseif ($rol === 'cliente') {
-        // En CLIENTE el RUT está separado
         $partes = explode('-', $rut);
         $rut_num = $partes[0] ?? '';
         $rut_dv = $partes[1] ?? '';
@@ -63,13 +62,13 @@ try {
     $row = oci_fetch_array($stid, OCI_ASSOC);
 
     if ($row) {
-        // ¡Login correcto!
+        // ¡Login correcto! Redirigimos a las vistas correctas
         if ($rol === 'admin') {
-            header("Location: admin.html");
+            header("Location: vista_admin.html");
         } elseif ($rol === 'mecanico') {
-            header("Location: mecanico.html");
+            header("Location: vista_mecanico.html");
         } elseif ($rol === 'cliente') {
-            header("Location: cliente.html");
+            header("Location: vista_cliente.html");
         }
         exit();
     } else {
