@@ -7,15 +7,10 @@ $rol = $_POST['rol'] ?? '';
 // ==========================================
 // CONFIGURACIÓN ORACLE CLOUD
 // ==========================================
-$usuario_oracle = 'ADMIN'; // <--- Pon tu usuario de Oracle Cloud aquí (suele ser ADMIN)
-$clave_oracle = 'TuClaveReal123'; // <--- Pon tu contraseña de Oracle Cloud aquí
-$cadena_conexion = 'tallerdb_low'; // <--- Usamos la conexión "low" de tu tnsnames
-
-// ¡IMPORTANTE! Cambia esta ruta por la ruta real donde está tu carpeta network/admin
-// Recuerda usar doble barra invertida \\ en Windows
-$wallet_path = 'C:\oracle\instantclient_21_10\network\admin'; 
-
-// Le decimos a PHP dónde está la Wallet
+$usuario_oracle = 'ADMIN';
+$clave_oracle = getenv('ORACLE_PASSWORD'); // Lee la variable de entorno
+$cadena_conexion = 'tallerdb_low';
+$wallet_path = getenv('TNS_ADMIN'); // Lee la ruta de la wallet
 putenv("TNS_ADMIN=" . $wallet_path);
 
 // Conectar a Oracle Cloud
