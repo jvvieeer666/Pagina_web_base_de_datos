@@ -11,8 +11,8 @@ $usuario_oracle = 'ADMIN';
 $clave_oracle = getenv('ORACLE_PASSWORD'); // Lee la contraseña de Render
 $cadena_conexion = 'tallerdb_low';
 
-// FORZAMOS LA RUTA DIRECTA AQUÍ (ya que tus archivos de Wallet están sueltos)
-$wallet_path = '/var/www/html/'; 
+// RUTA CORREGIDA A LA CARPETA WALLET
+$wallet_path = '/var/www/html/Wallet'; 
 putenv("TNS_ADMIN=" . $wallet_path);
 
 // Conectar a Oracle Cloud
