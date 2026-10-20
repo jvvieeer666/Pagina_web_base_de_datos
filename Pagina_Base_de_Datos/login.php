@@ -1,4 +1,7 @@
 <?php
+// INICIAR SESIÓN (Súper importante)
+session_start();
+
 // Recibir los datos del formulario
 $rut = $_POST['rut'] ?? '';
 $password = $_POST['password'] ?? '';
@@ -8,10 +11,8 @@ $rol = $_POST['rol'] ?? '';
 // CONFIGURACIÓN ORACLE CLOUD
 // ==========================================
 $usuario_oracle = 'ADMIN';
-$clave_oracle = getenv('ORACLE_PASSWORD'); // Lee la contraseña de Render
+$clave_oracle = getenv('ORACLE_PASSWORD');
 $cadena_conexion = 'tallerdb_low';
-
-// RUTA CORREGIDA A LA CARPETA WALLET
 $wallet_path = '/var/www/html/Wallet'; 
 putenv("TNS_ADMIN=" . $wallet_path);
 
@@ -26,7 +27,6 @@ if (!$conn) {
 // ==========================================
 // LÓGICA DE AUTENTICACIÓN
 // ==========================================
-
 try {
     if ($rol === 'admin') {
         $sql = "SELECT * FROM ADMINISTRADOR WHERE RUT = :rut AND \"PASSWORD\" = :pass";
@@ -57,32 +57,35 @@ try {
         oci_bind_by_name($stid, ':pass', $password);
     }
 
-    // Ejecutar
     oci_execute($stid);
     $row = oci_fetch_array($stid, OCI_ASSOC);
 
     if ($row) {
-        // ¡Login correcto! Redirigimos a las vistas correctas
+        // GUARDAMOS LOS DATOS EN LA SESIÓN
+        $_SESSION['usuario_rut'] = $row['RUT'];
+        $_SESSION['usuario_rol'] = $rol;
+        
+        // Si es cliente, guardamos el DV también porque lo necesitamos para la consulta
+        if ($rol === 'cliente') {
+            $_SESSION['usuario_dv'] = $row['RUT_DV']; 
+        }
+
+        // Redirigimos
         if ($rol === 'admin') {
             header("Location: vista_admin.html");
         } elseif ($rol === 'mecanico') {
             header("Location: vista_mecanico.html");
         } elseif ($rol === 'cliente') {
-            header("Location: vista_cliente.html");
+            header("Location: vista_cliente.php"); // AHORA ES .PHP
         }
         exit();
     } else {
-        // Login incorrecto
-        echo "<script>
-                alert('RUT o contraseña incorrectos. Verifica tus datos.');
-                window.location.href = 'index.html';
-              </script>";
+        echo "<script>alert('RUT o contraseña incorrectos.'); window.location.href = 'index.html';</script>";
     }
 
 } catch (Exception $e) {
     echo "Error en la consulta: " . $e->getMessage();
 }
-
 if (isset($stid)) { oci_free_statement($stid); }
 oci_close($conn);
 ?>
