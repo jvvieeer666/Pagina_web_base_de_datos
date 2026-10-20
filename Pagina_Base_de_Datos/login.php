@@ -72,9 +72,9 @@ try {
 
         // Redirigimos
         if ($rol === 'admin') {
-            header("Location: vista_admin.html");
+            header("Location: vista_admin.php");
         } elseif ($rol === 'mecanico') {
-            header("Location: vista_mecanico.html");
+            header("Location: vista_mecanico.php");
         } elseif ($rol === 'cliente') {
             header("Location: vista_cliente.php"); // AHORA ES .PHP
         }
