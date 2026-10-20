@@ -1,8 +1,8 @@
-# Usar una imagen que ya incluye PHP 8.2 y el Oracle Instant Client
-FROM donvito/php-oci8:8.2
+# Usar una imagen que ya incluye PHP 8.2, Apache y Oracle OCI8
+FROM adrianharabula/php8.2-apache-oci8
 
 # Copiamos tu código al servidor web
 COPY . /var/www/html/
 
-# Exponemos el puerto 80
+# Exponemos el puerto 80 (Render lo detectará)
 EXPOSE 80
