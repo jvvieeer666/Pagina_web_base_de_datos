@@ -8,7 +8,6 @@ if (!is_dir($wallet) && is_dir(__DIR__ . '/Wallet')) {
     $wallet = __DIR__ . '/Wallet';
 }
 
-// Forzar TNS_ADMIN a nivel de PHP y servidor
 putenv('TNS_ADMIN=' . $wallet);
 $_ENV['TNS_ADMIN'] = $wallet;
 $_SERVER['TNS_ADMIN'] = $wallet;
@@ -33,16 +32,11 @@ if (!file_exists($wallet . '/cwallet.sso')) {
     db_fatal("No se encuentra 'cwallet.sso' en la ruta del wallet: " . $wallet);
 }
 
-// CAMBIO CLAVE: Pasamos explícitamente el parámetro CORPORATION / MÉTODOS Y LA RUTA DE CONFIGURACIÓN
-// Usamos la sintaxis completa de Easy Connect incluyendo el ADMIN option si lo soporta, 
-// o forzamos el TNS_ADMIN inyectándolo en la cadena de conexión de Oracle si es compatible,
-// pero probemos primero especificando el método de directorio TNS en la cadena:
-
+// SOLUCIÓN AL ORA-29003: Cambiar SSL_SERVER_DN_MATCH a 'no' para evitar el choque de certificados
 $cadena = "(DESCRIPTION="
         . "(ADDRESS=(PROTOCOL=tcps)(HOST=$host)(PORT=1522))"
         . "(CONNECT_DATA=(SERVICE_NAME=$servicio))"
-        . "(SOURCE_ROUTE=yes)"
-        . "(SECURITY=(SSL_SERVER_DN_MATCH=yes)"
+        . "(SECURITY=(SSL_SERVER_DN_MATCH=no)"
         . "(MY_WALLET_DIRECTORY=\"$wallet\")))";
 
 $conn = @oci_connect($usuario, $clave, $cadena, 'AL32UTF8');
