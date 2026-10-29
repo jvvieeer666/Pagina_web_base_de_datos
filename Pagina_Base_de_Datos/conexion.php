@@ -3,10 +3,10 @@
 // CONEXIÓN ORACLE CLOUD (RENDER / LOCAL)
 // ==========================================
 
-// Forzar la ruta del wallet directamente al directorio seguro del contenedor
-$wallet = getenv('TNS_ADMIN') ?: '/opt/oracle/wallet';
+// Forzar la ruta directamente a la que crea el Dockerfile, ignorando valores viejos
+$wallet = '/opt/oracle/wallet';
 if (!is_dir($wallet) && is_dir(__DIR__ . '/Wallet')) {
-    $wallet = __DIR__ . '/Wallet'; // respaldo local
+    $wallet = __DIR__ . '/Wallet'; // respaldo solo para desarrollo local en tu PC
 }
 
 // Forzar TNS_ADMIN a nivel de entorno
@@ -30,7 +30,7 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-// Validación física del archivo del Wallet en la ruta correcta de Docker
+// Validación física del archivo del Wallet
 if (!file_exists($wallet . '/cwallet.sso')) {
     db_fatal("No se encuentra 'cwallet.sso' en la ruta del wallet: " . $wallet);
 }
