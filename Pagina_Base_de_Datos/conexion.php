@@ -1,16 +1,7 @@
 <?php
 // ==========================================
-// CONEXIÓN ORACLE CLOUD (RENDER / LOCAL)
+// CONEXIÓN DIRECTA ORACLE CLOUD (SIN WALLET)
 // ==========================================
-
-$wallet = '/opt/oracle/wallet';
-if (!is_dir($wallet) && is_dir(__DIR__ . '/Wallet')) {
-    $wallet = __DIR__ . '/Wallet';
-}
-
-putenv('TNS_ADMIN=' . $wallet);
-$_ENV['TNS_ADMIN'] = $wallet;
-$_SERVER['TNS_ADMIN'] = $wallet;
 
 function db_fatal(string $detalle): never
 {
@@ -28,25 +19,17 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-if (!file_exists($wallet . '/cwallet.sso')) {
-    db_fatal("No se encuentra 'cwallet.sso' en la ruta del wallet: " . $wallet);
-}
-
-// SOLUCIÓN AL ORA-29003: Cambiar SSL_SERVER_DN_MATCH a 'no' para evitar el choque de certificados
 $cadena = "(DESCRIPTION="
         . "(ADDRESS=(PROTOCOL=tcps)(HOST=$host)(PORT=1522))"
-        . "(CONNECT_DATA=(SERVICE_NAME=$servicio))"
-        . "(SECURITY=(SSL_SERVER_DN_MATCH=no)"
-        . "(MY_WALLET_DIRECTORY=\"$wallet\")))";
+        . "(CONNECT_DATA=(SERVICE_NAME=$servicio)))";
 
 $conn = @oci_connect($usuario, $clave, $cadena, 'AL32UTF8');
 
 if (!$conn) {
     $e = oci_error();
-    db_fatal(($e['message'] ?? 'error desconocido') . ' | wallet usado: ' . $wallet);
+    db_fatal($e['message'] ?? 'Error desconocido al conectar a la base de datos.');
 }
 
-// Si la app usa un esquema personalizado
 $esquema = getenv('ORACLE_SCHEMA');
 if ($esquema) {
     if (!preg_match('/^[A-Za-z][A-Za-z0-9_$#]{0,29}$/', $esquema)) {
@@ -59,7 +42,7 @@ if ($esquema) {
     }
 }
 
-// ---------- Ayudantes de consulta ----------
+// ---------- Ayudantes de consulta corregidos (sin error de bind) ----------
 
 function db_consultar($conn, string $sql, array $params = []): array
 {
@@ -69,9 +52,10 @@ function db_consultar($conn, string $sql, array $params = []): array
         throw new RuntimeException($e['message'] ?? 'Error al preparar la consulta.');
     }
 
-    $vars = $params;
-    foreach ($vars as $nombre => $_) {
-        oci_bind_by_name($stid, $nombre, $vars[$nombre]);
+    // Mantener referencias vivas para oci_bind_by_name
+    foreach ($params as $nombre => $valor) {
+        // Aseguramos que pasamos la variable por referencia correctamente
+        oci_bind_by_name($stid, $nombre, $params[$nombre]);
     }
 
     if (!@oci_execute($stid)) {
@@ -93,11 +77,10 @@ function db_ejecutar($conn, string $sql, array $params = []): int
     if (!$stid) {
         $e = oci_error($conn);
         throw new RuntimeException($e['message'] ?? 'Error al preparar la sentencia.');
-    }
+.    }
 
-    $vars = $params;
-    foreach ($vars as $nombre => $_) {
-        oci_bind_by_name($stid, $nombre, $vars[$nombre]);
+    foreach ($params as $nombre => $valor) {
+        oci_bind_by_name($stid, $nombre, $params[$nombre]);
     }
 
     if (!@oci_execute($stid)) {
