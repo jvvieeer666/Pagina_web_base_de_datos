@@ -42,7 +42,7 @@ if ($esquema) {
     }
 }
 
-// ---------- Ayudantes de consulta corregidos (sin error de bind) ----------
+// ---------- Ayudantes de consulta ----------
 
 function db_consultar($conn, string $sql, array $params = []): array
 {
@@ -52,9 +52,7 @@ function db_consultar($conn, string $sql, array $params = []): array
         throw new RuntimeException($e['message'] ?? 'Error al preparar la consulta.');
     }
 
-    // Mantener referencias vivas para oci_bind_by_name
     foreach ($params as $nombre => $valor) {
-        // Aseguramos que pasamos la variable por referencia correctamente
         oci_bind_by_name($stid, $nombre, $params[$nombre]);
     }
 
@@ -77,7 +75,7 @@ function db_ejecutar($conn, string $sql, array $params = []): int
     if (!$stid) {
         $e = oci_error($conn);
         throw new RuntimeException($e['message'] ?? 'Error al preparar la sentencia.');
-.    }
+    }
 
     foreach ($params as $nombre => $valor) {
         oci_bind_by_name($stid, $nombre, $params[$nombre]);
