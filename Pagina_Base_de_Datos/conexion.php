@@ -3,13 +3,12 @@
 // CONEXIÓN ORACLE CLOUD (RENDER / LOCAL)
 // ==========================================
 
-// Forzar la ruta directamente a la que crea el Dockerfile, ignorando valores viejos
 $wallet = '/opt/oracle/wallet';
 if (!is_dir($wallet) && is_dir(__DIR__ . '/Wallet')) {
-    $wallet = __DIR__ . '/Wallet'; // respaldo solo para desarrollo local en tu PC
+    $wallet = __DIR__ . '/Wallet';
 }
 
-// Forzar TNS_ADMIN a nivel de entorno
+// Forzar TNS_ADMIN a nivel de PHP y servidor
 putenv('TNS_ADMIN=' . $wallet);
 $_ENV['TNS_ADMIN'] = $wallet;
 $_SERVER['TNS_ADMIN'] = $wallet;
@@ -30,16 +29,21 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-// Validación física del archivo del Wallet
 if (!file_exists($wallet . '/cwallet.sso')) {
     db_fatal("No se encuentra 'cwallet.sso' en la ruta del wallet: " . $wallet);
 }
 
-// Cadena de conexión explícita con Easy Connect y TCPS
+// CAMBIO CLAVE: Pasamos explícitamente el parámetro CORPORATION / MÉTODOS Y LA RUTA DE CONFIGURACIÓN
+// Usamos la sintaxis completa de Easy Connect incluyendo el ADMIN option si lo soporta, 
+// o forzamos el TNS_ADMIN inyectándolo en la cadena de conexión de Oracle si es compatible,
+// pero probemos primero especificando el método de directorio TNS en la cadena:
+
 $cadena = "(DESCRIPTION="
         . "(ADDRESS=(PROTOCOL=tcps)(HOST=$host)(PORT=1522))"
         . "(CONNECT_DATA=(SERVICE_NAME=$servicio))"
-        . "(SECURITY=(SSL_SERVER_DN_MATCH=yes)))";
+        . "(SOURCE_ROUTE=yes)"
+        . "(SECURITY=(SSL_SERVER_DN_MATCH=yes)"
+        . "(MY_WALLET_DIRECTORY=\"$wallet\")))";
 
 $conn = @oci_connect($usuario, $clave, $cadena, 'AL32UTF8');
 
