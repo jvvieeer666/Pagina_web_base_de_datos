@@ -3,13 +3,13 @@
 // CONEXIÓN ORACLE CLOUD (RENDER / LOCAL)
 // ==========================================
 
-// Determinar la ruta del Wallet apuntando al directorio seguro definido en el Dockerfile
+// Forzar la ruta del wallet directamente al directorio seguro del contenedor
 $wallet = getenv('TNS_ADMIN') ?: '/opt/oracle/wallet';
 if (!is_dir($wallet) && is_dir(__DIR__ . '/Wallet')) {
-    $wallet = __DIR__ . '/Wallet'; // respaldo solo para pruebas locales
+    $wallet = __DIR__ . '/Wallet'; // respaldo local
 }
 
-// Forzar TNS_ADMIN a nivel de entorno para que oci8 y sqlnet.ora lo reconozcan
+// Forzar TNS_ADMIN a nivel de entorno
 putenv('TNS_ADMIN=' . $wallet);
 $_ENV['TNS_ADMIN'] = $wallet;
 $_SERVER['TNS_ADMIN'] = $wallet;
@@ -30,7 +30,7 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-// Validación física del archivo del Wallet antes de conectar
+// Validación física del archivo del Wallet en la ruta correcta de Docker
 if (!file_exists($wallet . '/cwallet.sso')) {
     db_fatal("No se encuentra 'cwallet.sso' en la ruta del wallet: " . $wallet);
 }
@@ -61,7 +61,7 @@ if ($esquema) {
     }
 }
 
-// ---------- Ayudantes de consulta (siempre con parámetros enlazados) ----------
+// ---------- Ayudantes de consulta ----------
 
 function db_consultar($conn, string $sql, array $params = []): array
 {
