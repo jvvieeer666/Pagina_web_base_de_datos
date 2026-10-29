@@ -23,12 +23,11 @@ RUN printf '%s\n' \
 
 ENV TNS_ADMIN=/opt/oracle/wallet
 
-# 3. CORRECCIÓN CLAVE DE PERMISOS PARA ORACLE:
-# La carpeta debe ser 755 (o 750) y los archivos internos 644 para que www-data pueda leerlos
+# 3. Permisos exactos para que www-data pueda leer el wallet sin error ORA-28759
 RUN chown -R www-data:www-data /var/www/html /opt/oracle/wallet && \
     find /var/www/html -type d -exec chmod 755 {} + && \
     find /var/www/html -type f -exec chmod 644 {} + && \
-    chmod -R 755 /opt/oracle/wallet && \
+    chmod 755 /opt/oracle/wallet && \
     chmod 644 /opt/oracle/wallet/* || true
 
 EXPOSE 80
