@@ -18,10 +18,6 @@ function db_fatal(string $detalle): never
 $usuario = getenv('ORACLE_USER') ?: 'ADMIN';
 $clave   = getenv('ORACLE_PASSWORD');
 
-// Alias del tnsnames.ora del wallet (NO el descriptor manual)
-// Ejemplo típico en ADB: "tallerdb_low", "tallerdb_high", "tallerdb_tp", etc.
-$alias   = getenv('ORACLE_TNS_ALIAS') ?: 'tallerdb_low';
-
 if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
@@ -30,7 +26,13 @@ if (!getenv('TNS_ADMIN')) {
     db_fatal('Falta TNS_ADMIN (debe apuntar al directorio del wallet, ej. /opt/oracle/wallet).');
 }
 
-$conn = @oci_connect($usuario, $clave, $alias, 'AL32UTF8');
+// Descriptor completo (evita depender del alias de tnsnames.ora → sin ORA-12154)
+$cadena = "(description= (retry_count=20)(retry_delay=3)"
+        . "(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))"
+        . "(connect_data=(service_name=g5c7ec52ab3e75c_tallerdb_low.adb.oraclecloud.com))"
+        . "(security=(ssl_server_dn_match=yes)))";
+
+$conn = @oci_connect($usuario, $clave, $cadena, 'AL32UTF8');
 
 if (!$conn) {
     $e = oci_error();
@@ -64,7 +66,7 @@ function db_consultar($conn, string $sql, array $params = []): array
     foreach ($params as $nombre => &$valor) {
         oci_bind_by_name($stid, $nombre, $valor);
     }
-    unset($valor); // romper la referencia al salir del bucle
+    unset($valor);
 
     if (!@oci_execute($stid)) {
         $e = oci_error($stid);
