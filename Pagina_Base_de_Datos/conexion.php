@@ -2,11 +2,6 @@
 // ==========================================
 // CONEXIÓN ORACLE CLOUD (CON WALLET / TCPS)
 // ==========================================
-// Requiere en el contenedor:
-//   - TNS_ADMIN=/opt/oracle/wallet
-//   - /opt/oracle/wallet/{cwallet.sso, ewallet.pem, tnsnames.ora, sqlnet.ora}
-//   - sqlnet.ora con DIRECTORY="/opt/oracle/wallet"
-// ==========================================
 
 function db_fatal(string $detalle): never
 {
@@ -22,15 +17,12 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-if (!getenv('TNS_ADMIN')) {
-    db_fatal('Falta TNS_ADMIN (debe apuntar al directorio del wallet, ej. /opt/oracle/wallet).');
-}
-
-// Descriptor completo (evita depender del alias de tnsnames.ora → sin ORA-12154)
+// IMPORTANTE: Aquí agregamos MY_WALLET_DIRECTORY apuntando a la ruta absoluta.
+// Esto obliga a oci8 a leer el wallet sin importar TNS_ADMIN.
 $cadena = "(description= (retry_count=20)(retry_delay=3)"
         . "(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))"
         . "(connect_data=(service_name=g5c7ec52ab3e75c_tallerdb_low.adb.oraclecloud.com))"
-        . "(security=(ssl_server_dn_match=yes)))";
+        . "(security=(MY_WALLET_DIRECTORY=/opt/oracle/wallet)(ssl_server_dn_match=yes)))";
 
 $conn = @oci_connect($usuario, $clave, $cadena, 'AL32UTF8');
 
