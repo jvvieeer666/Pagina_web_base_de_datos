@@ -1,8 +1,8 @@
 <?php
 // Utilidades de sesión y seguridad compartidas por todas las páginas.
 
-const LOGIN_MAX_INTENTOS = 5;     // intentos fallidos permitidos
-const LOGIN_BLOQUEO_SEG  = 900;   // 15 minutos de bloqueo
+const LOGIN_MAX_INTENTOS = 5;      // intentos fallidos permitidos
+const LOGIN_BLOQUEO_SEG  = 900;    // 15 minutos de bloqueo
 const SESION_MAX_INACTIVA = 1800; // 30 minutos sin actividad
 
 // Escapa texto antes de mostrarlo en HTML (evita XSS)
@@ -13,9 +13,16 @@ function h($valor): string
 
 function es_https(): bool
 {
-    // Render termina el HTTPS en su proxy, por eso se revisa también la cabecera reenviada
-    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    if (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+    if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
+        return true;
+    }
+    if (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && strtolower($_SERVER['HTTP_FRONT_END_HTTPS']) !== 'off') {
+        return true;
+    }
+    return false;
 }
 
 function iniciar_sesion_segura(): void
@@ -24,17 +31,25 @@ function iniciar_sesion_segura(): void
         return;
     }
 
-    header('X-Content-Type-Options: nosniff');
-    header('X-Frame-Options: DENY');
-    header('Referrer-Policy: same-origin');
+    // Cabeceras de seguridad básicas
+    if (!headers_sent()) {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
+        header('Referrer-Policy: same-origin');
+    }
 
+    $is_secure = es_https();
+
+    // Configuración segura de la cookie de sesión adaptada a Render
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
-        'secure'   => es_https(),
+        'domain'   => '',
+        'secure'   => $is_secure,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+    
     session_start();
 
     if (isset($_SESSION['ultimo_acceso']) && time() - $_SESSION['ultimo_acceso'] > SESION_MAX_INACTIVA) {
@@ -52,7 +67,7 @@ function requerir_rol(string $rol): void
     iniciar_sesion_segura();
 
     if (empty($_SESSION['usuario_rut']) || ($_SESSION['usuario_rol'] ?? '') !== $rol) {
-        header('Location: index.html');
+        header('Location: index.php'); // Asegurado a .php o la ruta de tu login
         exit;
     }
 }
