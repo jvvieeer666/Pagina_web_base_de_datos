@@ -1,13 +1,18 @@
 <?php
 // ==========================================
-// CONEXIÓN ORACLE CLOUD (CON WALLET / TCPS)
+// CONEXIÓN ORACLE CLOUD (WALLET / TCPS)
 // ==========================================
+
+// Iniciar búfer por si acaso alguna advertencia intenta imprimirse antes de tiempo
+if (ob_get_level() == 0) {
+    ob_start();
+}
 
 function db_fatal(string $detalle): never
 {
-    error_log('Oracle: ' . $detalle);
+    error_log('Oracle Error: ' . $detalle);
     http_response_code(500);
-    exit('Error Oracle: ' . htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8'));
+    exit('Error de conexión a la base de datos. Contacte al administrador.');
 }
 
 $usuario = getenv('ORACLE_USER') ?: 'ADMIN';
@@ -17,8 +22,7 @@ if (!$clave) {
     db_fatal('Falta configurar la variable de entorno ORACLE_PASSWORD en Render.');
 }
 
-// IMPORTANTE: Aquí agregamos MY_WALLET_DIRECTORY apuntando a la ruta absoluta.
-// Esto obliga a oci8 a leer el wallet sin importar TNS_ADMIN.
+// Cadena de conexión directa especificando la ruta del Wallet
 $cadena = "(description= (retry_count=20)(retry_delay=3)"
         . "(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))"
         . "(connect_data=(service_name=g5c7ec52ab3e75c_tallerdb_low.adb.oraclecloud.com))"
@@ -31,6 +35,7 @@ if (!$conn) {
     db_fatal($e['message'] ?? 'Error desconocido al conectar a la base de datos.');
 }
 
+// Esquema opcional
 $esquema = getenv('ORACLE_SCHEMA');
 if ($esquema) {
     if (!preg_match('/^[A-Za-z][A-Za-z0-9_$#]{0,29}$/', $esquema)) {
@@ -54,11 +59,10 @@ function db_consultar($conn, string $sql, array $params = []): array
         throw new RuntimeException($e['message'] ?? 'Error al preparar la consulta.');
     }
 
-    // Binds por REFERENCIA: la variable debe seguir viva hasta oci_execute
-    foreach ($params as $nombre => &$valor) {
-        oci_bind_by_name($stid, $nombre, $valor);
+    // Binds seguros: pasando el arreglo por referencia viva
+    foreach (array_keys($params) as $nombre) {
+        oci_bind_by_name($stid, $nombre, $params[$nombre]);
     }
-    unset($valor);
 
     if (!@oci_execute($stid)) {
         $e = oci_error($stid);
@@ -81,10 +85,9 @@ function db_ejecutar($conn, string $sql, array $params = []): int
         throw new RuntimeException($e['message'] ?? 'Error al preparar la sentencia.');
     }
 
-    foreach ($params as $nombre => &$valor) {
-        oci_bind_by_name($stid, $nombre, $valor);
+    foreach (array_keys($params) as $nombre) {
+        oci_bind_by_name($stid, $nombre, $params[$nombre]);
     }
-    unset($valor);
 
     if (!@oci_execute($stid)) {
         $e = oci_error($stid);
